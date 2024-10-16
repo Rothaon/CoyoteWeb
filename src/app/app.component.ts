@@ -43,14 +43,49 @@ export class AppComponent implements OnInit {
       console.log(' Post Services:');
       for (const service of services)
       {
+        console.log("----------------------------------------");
         console.log(`Service: ${service.uuid}`);
         const characteristics = await service.getCharacteristics();
 
         for (const characteristic of characteristics)
         {
-          console.log(`Characteristic: ${characteristic.uuid}`);
+          let uuid = characteristic.uuid;
+          // console.log(`Characteristic: ${characteristic.uuid}`);
           const value = await characteristic.readValue();
-          console.log(`Value: ${this.bufferToHex(value.buffer)}`);
+          // Only for the A/Battery Level service
+          if( uuid == "955a1500-0fe2-f5aa-a094-84b8d4f3e8ad" )
+          {
+            // console.log("Byte Length of:", value.byteLength + " To int (dec): " + value.getUint8(0));
+            console.log("Battery Level: " + value.getUint8(0));
+            // Print each bit of value
+              // Convert the value to an 8-bit binary string
+            const binaryString = (value.getInt8(0) & 0xFF).toString(2).padStart(8, '0');
+
+            // Print each bit
+            for (let i = 0; i < binaryString.length; i++)
+            {
+              // console.log(`Bit ${i}: ${binaryString[i]}`);
+            }
+          }
+          // Power module(S)
+          // 23-22bit (reserved) 21-11bit (actual strength of channel B) 10-0bit (actual strength of channel A)
+          else if( uuid == "955a1504-0fe2-f5aa-a094-84b8d4f3e8ad" )
+          {
+            // 23-22bit (reserved) 21-11bit (actual strength of channel B) 10-0bit (actual strength of channel A)
+            console.log("Byte Length of:", value.byteLength );// + " To int (dec): " + value.getUint32(0));
+            const dataView = new DataView(value.buffer);
+            const rawValue = (dataView.getUint8(0) << 16) | (dataView.getUint8(1) << 8) | dataView.getUint8(2);
+
+            const channelA = rawValue & 0x7FF; // Extract lower 11 bits
+            const channelB = (rawValue >> 11) & 0x7FF; // Extract next 11 bits
+
+            console.log(`Channel A: ${channelA}`);
+            console.log(`Channel B: ${channelB}`);
+          }
+          else
+          {
+            // console.log(`Value (hex): ${this.bufferToHex(value.buffer)}`);
+          }
         }
       }
     }
