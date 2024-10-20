@@ -1,2 +1,22 @@
 {{title}}
 <button (click)="printUnpairedBTLEDevices()">Scan for BTLE Devices</button>
+
+<div *ngIf="haveDevice">
+  <h2>Device Paired:</h2>
+  <ul>
+    <li>
+      Name: {{deviceData.name}}
+    </li>
+    <li>
+      ID: {{deviceData.id}}
+    </li>
+    <li>
+      Battery Level: {{deviceData.batteryLevel ?? "???"}}
+    </li>
+    <li>
+      Channel A: {{deviceData.channelA ?? "???"}}
+    </li>
+    <li>
+      Channel B: {{deviceData.channelB ?? "???"}}
+    </li>
+  </ul>
