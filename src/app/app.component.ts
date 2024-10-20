@@ -53,11 +53,7 @@ export class AppComponent implements OnInit {
       this.fillDeviceModel(device, gattServer);
   }
 
-  // Helper function to convert buffer to hex string
-  bufferToHex(buffer: ArrayBuffer): string {
-    return Array.prototype.map.call(new Uint8Array(buffer), (x: number) => ('00' + x.toString(16)).slice(-2)).join('');
-  }
-
+  
   // Function to fill device model
   fillDeviceModel(device: any, gattServer: any)
   {
@@ -68,16 +64,29 @@ export class AppComponent implements OnInit {
     this.deviceData.gattServer = gattServer;
     this.deviceData.getServices();
   }
-
+  
   sendAChannelStrength()
   {
     console.log("Sending A Channel Strength" + this.channelAInput);
     this.deviceData.updateChannelAStrength(this.channelAInput);
   }
-
+  
   sendBChannelStrength()
   {
     console.log("Sending B Channel Strength" + this.channelBInput);
     this.deviceData.updateChannelBStrength(this.channelBInput);
+  }
+  
+  startSendingWaveform()
+  {
+    console.log("Starting to send waveform");
+    this.deviceData.startSendingWaveform();
+  }
+
+  // -- Helpers
+
+  // Helper function to convert buffer to hex string
+  bufferToHex(buffer: ArrayBuffer): string {
+    return Array.prototype.map.call(new Uint8Array(buffer), (x: number) => ('00' + x.toString(16)).slice(-2)).join('');
   }
 }
