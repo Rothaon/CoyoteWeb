@@ -1,14 +1,15 @@
 /// <reference types="web-bluetooth" />
 
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { DeviceModel } from './device.model';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, CommonModule],
+  imports: [RouterOutlet, CommonModule, FormsModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
@@ -18,8 +19,9 @@ export class AppComponent implements OnInit {
 
   deviceData: DeviceModel = new DeviceModel();
 
-
   title = 'BTest';
+  channelAInput: any;
+  channelBInput: any;
 
   ngOnInit() {
     // Initialization logic if any
@@ -65,5 +67,17 @@ export class AppComponent implements OnInit {
     this.deviceData.batteryLevel = device.batteryLevel;
     this.deviceData.gattServer = gattServer;
     this.deviceData.getServices();
+  }
+
+  sendAChannelStrength()
+  {
+    console.log("Sending A Channel Strength" + this.channelAInput);
+    this.deviceData.updateChannelAStrength(this.channelAInput);
+  }
+
+  sendBChannelStrength()
+  {
+    console.log("Sending B Channel Strength" + this.channelBInput);
+    this.deviceData.updateChannelBStrength(this.channelBInput);
   }
 }

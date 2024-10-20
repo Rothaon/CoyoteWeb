@@ -20,3 +20,18 @@
       Channel B: {{deviceData.channelB ?? "???"}}
     </li>
   </ul>
+  <br><br>
+  
+  <div>
+    <label for="inputValue">A Strength (0-2047):</label>
+    <input id="inputValue" type="number" [(ngModel)]="channelAInput" min="0" max="2047">
+    <button (click)="sendAChannelStrength()">Send A Value</button>
+  </div>
+  <br><br>
+  <div>
+    <label for="inputValue">B Strength (0-2047):</label>
+    <input id="inputValue" type="number" [(ngModel)]="channelBInput" min="0" max="2047">
+    <button (click)="sendBChannelStrength()">Send B Value</button>
+  </div>
+  <br><br>
+</div>

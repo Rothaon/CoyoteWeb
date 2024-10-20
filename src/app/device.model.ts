@@ -94,12 +94,58 @@ export class DeviceModel
     });
   }
 
-  updateBatteryLevel()
+  async updateBatteryLevel()
   {
     console.log("Requesting Battery Level");
     this.batteryLevelCharacteristic.readValue().then((value:any) => {
       console.log("Battery Level: " + value.getUint8(0));
       this.batteryLevel = value.getUint8(0);
     });
+  }
+
+  async writeABPowerChannel(channelB: number | null, channelA: number | null)
+  {
+    console.log("Writing Channel A and B Power");
+    if (channelB !== null && channelA !== null) {
+      const buffer = new ArrayBuffer(3);
+      const dataView = new DataView(buffer);
+
+      // CHANNEL B
+      const high6Bits = (channelB & 0x7E0) >> 5;
+      dataView.setUint8(0, high6Bits);
+
+      const low5Bits = (channelB & 0x1F) << 3;
+      dataView.setUint8(1, low5Bits);
+
+      // CHANNEL A
+      // 123 4567 89AB
+      // 111 0000 0000
+      // 123 0000 0000
+      const maskedBits = (channelA & 0x700) >> 8;
+      // 000 0000 0123
+      // Dont overwrite channel A bits
+      dataView.setUint8(1, dataView.getUint8(1) | maskedBits);
+
+      // Last byte are 8 lower of channel b
+      dataView.setUint8(2, (channelA & 0xFF)); // Upper 3 bits of channel B
+      // 45567 89AB
+
+      await this.channelABPowerCharacteristic.writeValue(buffer);
+      console.log('Buffer written:', new Uint8Array(buffer));
+    }
+  }
+
+  async updateChannelAStrength(channelA: number)
+  {
+    console.log("Updating Channel A Strength" + channelA);
+    await this.writeABPowerChannel(this.channelB, channelA);
+    this.updateABPowerChannel();
+  }
+
+  async updateChannelBStrength(channelB: number)
+  {
+    console.log("Updating Channel B Strength" + channelB);
+    await this.writeABPowerChannel( channelB, this.channelA);
+    this.updateABPowerChannel();
   }
 }
