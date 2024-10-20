@@ -110,25 +110,20 @@ export class DeviceModel
       const buffer = new ArrayBuffer(3);
       const dataView = new DataView(buffer);
 
-      // CHANNEL B
+      // CHANNEL B - Top 6 in first byte right, bottom 5 in second byte left.
       const high6Bits = (channelB & 0x7E0) >> 5;
       dataView.setUint8(0, high6Bits);
 
       const low5Bits = (channelB & 0x1F) << 3;
       dataView.setUint8(1, low5Bits);
 
-      // CHANNEL A
-      // 123 4567 89AB
-      // 111 0000 0000
-      // 123 0000 0000
+      // CHANNEL A - Top 3 in second byte right, bottom 8 in third byte.
       const maskedBits = (channelA & 0x700) >> 8;
-      // 000 0000 0123
       // Dont overwrite channel A bits
       dataView.setUint8(1, dataView.getUint8(1) | maskedBits);
 
       // Last byte are 8 lower of channel b
-      dataView.setUint8(2, (channelA & 0xFF)); // Upper 3 bits of channel B
-      // 45567 89AB
+      dataView.setUint8(2, (channelA & 0xFF));
 
       await this.channelABPowerCharacteristic.writeValue(buffer);
       console.log('Buffer written:', new Uint8Array(buffer));
