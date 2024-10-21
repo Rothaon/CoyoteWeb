@@ -100,20 +100,16 @@ export class AppComponent implements OnInit {
   {
     console.log("Sending Wave A");
     this.deviceData.writeWaveformA(this.axInput, this.ayInput, this.azInput);
+    this.deviceData.startSendingWaveform("A");
   }
 
   sendWaveB()
   {
     console.log("Sending Wave B");
     this.deviceData.writeWaveformB(this.bxInput, this.byInput, this.bzInput);
+    this.deviceData.startSendingWaveform("B");
   }
   
-  startSendingWaveform()
-  {
-    console.log("Starting to send waveform");
-    this.deviceData.startSendingWaveform();
-  }
-
   // -- Helpers
 
   // Helper function to convert buffer to hex string

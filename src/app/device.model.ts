@@ -178,7 +178,7 @@ export class DeviceModel
     await this.channelABPowerCharacteristic.writeValue(buffer);
   }
 
-  startSendingWaveform()
+  startSendingWaveform(id: string)
   {
     this.isSendingWaveform = true;
     // every 0.1 call sendNewWaveform
@@ -190,7 +190,11 @@ export class DeviceModel
         this.isSendingWaveform = false;
         return;
       }
-      this.waveformBCharacteristic.writeValue(this.waveABuffer);
+      if (id == "A")
+        await this.waveformBCharacteristic.writeValue(this.waveABuffer);
+      else
+        await this.waveformACharacteristic.writeValue(this.waveBBuffer);
+
       ++count;
     }, 100);
   }
@@ -218,13 +222,11 @@ export class DeviceModel
   async writeWaveformA(ax: number, ay: number, az: number)
   {
     this.waveABuffer = this.encodeWaveform(ax, ay, az);
-    // this.startSendingWaveform();
   }
 
   async writeWaveformB(bx: number, by: number, bz: number)
   {
-    this.waveABuffer = this.encodeWaveform(bx, by, bz);
-    // this.startSendingWaveform();
+    this.waveBBuffer = this.encodeWaveform(bx, by, bz);
   }
   
   async getConfig()
