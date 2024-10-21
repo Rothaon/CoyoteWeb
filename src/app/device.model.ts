@@ -92,7 +92,7 @@ export class DeviceModel
       if( characteristic.uuid == "955a1504-0fe2-f5aa-a094-84b8d4f3e8ad" )
       {
         this.channelABPowerCharacteristic = characteristic;
-        this.updateABPowerChannel();
+        this.readABPowerChannel();
       }
       else if( characteristic.uuid == "955a1505-0fe2-f5aa-a094-84b8d4f3e8ad" )
       {
@@ -113,22 +113,17 @@ export class DeviceModel
     }
   }
 
-  async updateABPowerChannel()
+  async readABPowerChannel()
   {
     console.log("Requesting Channel A and B Power");
     this.channelABPowerCharacteristic.readValue().then((value:any) => {
-      const dataView = new DataView(value.buffer);
+      const [powerA, powerB] = this.parsePower(new DataView(value.buffer));
 
-      const rawValue = (dataView.getUint8(0) << 16) | (dataView.getUint8(1) << 8) | dataView.getUint8(2);
+      console.log("KChannel A: " + powerA);
+      console.log("KChannel B: " + powerB);
 
-      const channelB = (rawValue >> 11) & 0x7FF; // Extract next 11 bits
-      const channelA = rawValue & 0x7FF; // Extract lower 11 bits
-
-      console.log(`Channel A: ${channelA}`);
-      console.log(`Channel B: ${channelB}`);
-
-      this.channelA = channelA;
-      this.channelB = channelB;
+      this.channelA = powerA;
+      this.channelB = powerB;
     });
   }
 
@@ -176,16 +171,26 @@ export class DeviceModel
 
   async updateChannelAStrength(channelA: number)
   {
-    console.log("Updating Channel A Strength" + channelA);
-    await this.writeABPowerChannel( channelA, this.channelB);
-    this.updateABPowerChannel();
+    console.log("Updating Channel A Strength A:" + channelA + " B: " + this.channelB);
+
+    // Get buffer
+    let buffer = this.encodePower(channelA, this.channelB ?? 0);
+
+    await this.channelABPowerCharacteristic.writeValue(buffer);
+
+    this.readABPowerChannel();
   }
 
   async updateChannelBStrength(channelB: number)
   {
-    console.log("Updating Channel B Strength" + channelB);
-    await this.writeABPowerChannel( this.channelA, channelB);
-    this.updateABPowerChannel();
+    console.log("Updating Channel B Strength A:" + this.channelA + "B: " + channelB);
+    
+    // Get buffer
+    let buffer = this.encodePower(this.channelA ?? 0, channelB);
+
+    await this.channelABPowerCharacteristic.writeValue(buffer);
+    
+    this.readABPowerChannel();
   }
 
   startSendingWaveform()
@@ -266,6 +271,35 @@ export class DeviceModel
     console.log('Max Power:', maxPower);
     console.log('Power Step:', powerStep);
   }
+
+  // New method to parse power levels
+  parsePower(dataView: DataView): [number, number]
+  {
+    this.flipFirstAndThirdByte(dataView.buffer);
+
+    // notify/write: 3 bytes: flipFirstAndThirdByte(zero(2) ~ uint(11).as("powerLevelB") ~uint(11).as("powerLevelA")
+    const powerA = dataView.getUint16(0) >> 3; // push the remainder of B out of the first 2 bytes
+    const powerB = dataView.getUint16(1) & 0b0000011111111111; // push the remainder A out of the last 2 bytes
+
+    return [powerA, powerB];
+  }
+
+  encodePower(powerA: number, powerB: number): ArrayBuffer {
+    /**
+     * notify/write: 3 bytes: zero(2) ~ uint(11).as("powerLevelB") ~uint(11).as("powerLevelA")
+     * 0 0 a a a a a a | a a a a a b b b | b b b b b b b b
+     * Power levels must likely be a multiple of "powerStep" and between 0 and "maxPower" (as obtained through config attribute.)
+     */
+
+    const buffer = new ArrayBuffer(3);
+    const view = new DataView(buffer);
+    view.setUint8(0, (powerA >>> 5) & 0b00111111);
+    view.setUint8(1, ((powerA & 0b00011111) << 3) | ((powerB & 0b11111111111) >>> 8));
+    view.setUint8(2, powerB & 0b11111111);
+
+    this.flipFirstAndThirdByte(buffer);
+    return buffer;
+}
 
   // Helper function to flip the first and third bytes
   flipFirstAndThirdByte(buffer: ArrayBuffer)
