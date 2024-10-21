@@ -23,6 +23,14 @@ export class AppComponent implements OnInit {
   channelAInput: any;
   channelBInput: any;
 
+  // Waveform data
+  axInput: number = 0;
+  ayInput: number = 0;
+  azInput: number = 0;
+  bxInput: number = 0;
+  byInput: number = 0;
+  bzInput: number = 0;
+
   ngOnInit() {
     // Initialization logic if any
   }
@@ -75,6 +83,18 @@ export class AppComponent implements OnInit {
   {
     console.log("Sending B Channel Strength" + this.channelBInput);
     this.deviceData.writeChannelBStrength(this.channelBInput);
+  }
+
+  sendWaveA()
+  {
+    console.log("Sending Wave A");
+    this.deviceData.writeWaveformA(this.axInput, this.ayInput, this.azInput);
+  }
+
+  sendWaveB()
+  {
+    console.log("Sending Wave B");
+    this.deviceData.writeWaveformB(this.bxInput, this.byInput, this.bzInput);
   }
   
   startSendingWaveform()

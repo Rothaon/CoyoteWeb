@@ -34,6 +34,8 @@ export class DeviceModel
 
   readonly CONFIG_CHAR_UUID: string = "955a1507-0fe2-f5aa-a094-84b8d4f3e8ad"
 
+  waveABuffer: ArrayBuffer = new ArrayBuffer(3);
+  waveBBuffer: ArrayBuffer = new ArrayBuffer(3);
   isSendingWaveform: boolean = false;
 
   constructor()
@@ -124,6 +126,7 @@ export class DeviceModel
       this.batteryLevelCharacteristic.addEventListener('characteristicvaluechanged', (event: any) => {
         const value = event.target.value;
         this.batteryLevel = value.getUint8(0);
+        console.log("Notified Battery Level: " + this.batteryLevel);
       });
     });
   }
@@ -187,12 +190,22 @@ export class DeviceModel
         this.isSendingWaveform = false;
         return;
       }
-      let buffer = this.encodeWaveform(5, 95, 20);
-      this.waveformBCharacteristic.writeValue(buffer);
+      this.waveformBCharacteristic.writeValue(this.waveABuffer);
       ++count;
     }, 100);
   }
 
+  async writeWaveformA(ax: number, ay: number, az: number)
+  {
+    this.waveABuffer = this.encodeWaveform(ax, ay, az);
+    this.startSendingWaveform();
+  }
+
+  async writeWaveformB(bx: number, by: number, bz: number)
+  {
+    this.waveABuffer = this.encodeWaveform(bx, by, bz);
+    this.startSendingWaveform();
+  }
   
   async getConfig()
   {

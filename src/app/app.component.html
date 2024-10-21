@@ -27,18 +27,41 @@
     </li>
   </ul>
   <br><br>
-  
   <div>
     <label for="inputValue">A Strength (0-2047):</label>
     <input id="inputValue" type="number" [(ngModel)]="channelAInput" min="0" max="2047">
     <button (click)="sendAChannelStrength()">Send A Value</button>
+    <div>
+      <label for="axInput">AX (0-31):</label>
+      <input id="axInput" type="number" [(ngModel)]="axInput" min="0" max="31">
+    </div>
+    <div>
+      <label for="ayInput">AY (0-1031):</label>
+      <input id="ayInput" type="number" [(ngModel)]="ayInput" min="0" max="1031">
+    </div>
+    <div>
+      <label for="azInput">AZ (0-31):</label>
+      <input id="azInput" type="number" [(ngModel)]="azInput" min="0" max="31">
+    </div>
+    <button (click)="sendWaveA()">Send Wave A</button>
   </div>
   <br><br>
   <div>
     <label for="inputValue">B Strength (0-2047):</label>
     <input id="inputValue" type="number" [(ngModel)]="channelBInput" min="0" max="2047">
     <button (click)="sendBChannelStrength()">Send B Value</button>
+    <div>
+      <label for="bxInput">BX (0-31):</label>
+      <input id="bxInput" type="number" [(ngModel)]="bxInput" min="0" max="31">
+    </div>
+    <div>
+      <label for="byInput">BY (0-1031):</label>
+      <input id="byInput" type="number" [(ngModel)]="byInput" min="0" max="1031">
+    </div>
+    <div>
+      <label for="bzInput">BZ (0-31):</label>
+      <input id="bzInput" type="number" [(ngModel)]="bzInput" min="0" max="31">
+    </div>
+    <button (click)="sendWaveB()">Send Wave B</button>
   </div>
-  <br><br>
-  <button (click)="startSendingWaveform()">Start Sending</button>
 </div>
