@@ -38,14 +38,6 @@ export class DeviceModel
 
   constructor()
   {
-    // console.log("Pre A");
-    // this.sendNewWaveform(31,0,0)
-    // console.log("Pre B");
-    // this.sendNewWaveform(0,1023,0);
-    // console.log("Pre C");
-    // this.sendNewWaveform(0,0,31);
-    // console.log("Post C");
-    // this.sendNewWaveform(1,9,20);
   }
 
   async getServices()
@@ -112,6 +104,17 @@ export class DeviceModel
       }
     }
   }
+  
+  // -- READ/WRITE CHARACTERISTICS --
+
+  async updateBatteryLevel()
+  {
+    console.log("Requesting Battery Level");
+    this.batteryLevelCharacteristic.readValue().then((value:any) => {
+      console.log("Battery Level: " + value.getUint8(0));
+      this.batteryLevel = value.getUint8(0);
+    });
+  }
 
   async readABPowerChannel()
   {
@@ -125,48 +128,6 @@ export class DeviceModel
       this.channelA = powerA;
       this.channelB = powerB;
     });
-  }
-
-  async updateBatteryLevel()
-  {
-    console.log("Requesting Battery Level");
-    this.batteryLevelCharacteristic.readValue().then((value:any) => {
-      console.log("Battery Level: " + value.getUint8(0));
-      this.batteryLevel = value.getUint8(0);
-    });
-  }
-
-  // It looks like A and B channels are switched.
-  async writeABPowerChannel(channelA: number | null, channelB: number | null)
-  {
-    console.log("Writing Channel A and B Power" + channelA + " " + channelB);
-    if (channelB !== null && channelA !== null)
-    {
-      /**
-       * notify/write: 3 bytes: zero(2) ~ uint(11).as("powerLevelB") ~uint(11).as("powerLevelA")
-       * 0 0 b b b b b b  | b b b b b a a a | a a a a a a a a
-       * Power levels must likely be a multiple of "powerStep" and between 0 and "maxPower" (as obtained through config attribute.)
-       */
-      const buffer = new ArrayBuffer(3);
-      const dataView = new DataView(buffer);
-
-      // CHANNEL B - Top 6 in first byte right, bottom 5 in second byte left.
-      const top6BBits = (channelB & 0x7E0) >>> 5;
-      dataView.setUint8(0, top6BBits);
-      const low5Bits = (channelB & 0x1F) << 3;
-      dataView.setUint8(1, low5Bits);
-
-      // CHANNEL A - Top 3 in second byte right, bottom 8 in third byte.
-      const top3Bits = (channelA & 0x700) >>> 8;
-      // Dont overwrite channel A bits
-      dataView.setUint8(1, dataView.getUint8(1) | top3Bits);
-
-      // Last byte are 8 lower of channel b
-      dataView.setUint8(2, (channelA & 0xFF));
-
-      await this.channelABPowerCharacteristic.writeValue(buffer);
-      // console.log('Buffer written:', new Uint8Array(buffer));
-    }
   }
 
   async updateChannelAStrength(channelA: number)
@@ -189,7 +150,7 @@ export class DeviceModel
     let buffer = this.encodePower(this.channelA ?? 0, channelB);
 
     await this.channelABPowerCharacteristic.writeValue(buffer);
-    
+
     this.readABPowerChannel();
   }
 
@@ -198,78 +159,65 @@ export class DeviceModel
     this.isSendingWaveform = true;
     // every 0.1 call sendNewWaveform
     let count = 0;
-    const intervalId = setInterval(() => {
+    const intervalId = setInterval(async () => {
       if (count >= 5)
       {
         clearInterval(intervalId);
         this.isSendingWaveform = false;
         return;
       }
-      this.sendNewWaveform(5, 95, 20);
+      let buffer = this.encodeWaveform(5, 95, 20);
+      this.parsePattern(new DataView(buffer));
+      await this.waveformBCharacteristic.writeValue(buffer);
       ++count;
     }, 100);
   }
 
-  // Waveform control module (XYZ)
-  // X: 5 bits of data from 0 to 4 in PWM_A34 or PWM_B34 [0-31]
-  // Y: 10 bits of data from 5 to 14 in PWM_A34 or PWM_B34 [0-1023]
-  // Z: 5 bits of data from 15 to 19 in PWM_A34 or PWM_B34 [0-31]
-  async sendNewWaveform(x: number, y: number, z: number)
-  {
-    //23-20bit (reserved) 19-15bit (Az) 14-5bit (Ay) 4-0bit (Ax)
-    console.log("Sending New Waveform " + x + " " + y + " " + z);
-    const buffer = new ArrayBuffer(3);
-    const dataView = new DataView(buffer);
-
-    // 0000 ZZZZ | ZYYY YYYY| YYYX XXXX
-    // X
-
-    dataView.setUint8(2, x);
-
-    // Y
-    const lowY3Bits = (y & 0x7) << 5;
-    dataView.setUint8(2, dataView.getUint8(2) | lowY3Bits);
-
-    const highY5Bits = (y & 0x3E0) >>> 5;
-    dataView.setUint8(1, highY5Bits);
-
-
-    const high3YBits = (y & 0x380) >> 7;
-    dataView.setUint8(0, dataView.getUint8(0) | high3YBits);
-    const low7YBits = (y & 0x7F ) << 1;
-    dataView.setUint8(1, low7YBits);
-
-    // Z
-    const low1ZBits = (z & 0x1) << 7;
-    dataView.setUint8(1, dataView.getUint8(1) | low1ZBits);
-
-    const high4ZBits = (z & 0x1E) >>> 1;
-
-    dataView.setUint8(0, high4ZBits);
-
-    await this.waveformBCharacteristic.writeValue(buffer);
-    console.log('Buffer written:', new Uint8Array(buffer));
-  }
-
+  
   async getConfig()
   {
     console.log('Reading Config Characteristic...');
-
+    
     // Assuming `config` is a BluetoothRemoteGATTCharacteristic
     const configValue = await this.configCharacteristic.readValue();
-
+    
     // Flip the first and third bytes
     this.flipFirstAndThirdByte(configValue.buffer);
-
+    
     // Read the values
     const maxPower = configValue.getUint16(0);
     const powerStep = configValue.getUint8(2);
-
+    
     this.maxPower = maxPower;
     this.powerStep = powerStep;
-
+    
     console.log('Max Power:', maxPower);
     console.log('Power Step:', powerStep);
+  }
+  
+  // -- HELPERS
+
+  parsePattern(dataView: DataView): [number, number, number]
+  {
+    this.flipFirstAndThirdByte(dataView.buffer);
+    // flipFirstAndThirdByte(zero(4) ~ uint(5).as("az") ~ uint(10).as("ay") ~ uint(5).as("ax"))
+    // 0000zzzz | zyyyyyyy | yyyxxxxx
+    const az = (dataView.getUint16(0) & 0b00001111_10000000) >>> 7;
+    const ay = ((dataView.getUint16(0) & 0b00000000_01111111) << 3) | ((dataView.getUint8(2) & 0b11100000) >>> 5);
+    const ax = (dataView.getUint8(2) & 0b00011111);
+    return [ax, ay, az];
+  }
+  
+  encodeWaveform(ax: number, ay: number, az: number): ArrayBuffer {
+    const buffer = new ArrayBuffer(3);
+    // flipFirstAndThirdByte(zero(4) ~ uint(5).as("az") ~ uint(10).as("ay") ~ uint(5).as("ax"))
+    // 0000zzzz | zyyyyyyy | yyyxxxxx
+    const view = new DataView(buffer);
+    view.setUint8(0, ((az & 0b00011110) >>> 1));
+    view.setUint16(1, ((az & 0b00000001) << 15) | ((ay & 0b00000011_11111111) << 5) | (ax & 0b00011111));
+
+    this.flipFirstAndThirdByte(buffer);
+    return buffer;
   }
 
   // New method to parse power levels
@@ -299,7 +247,7 @@ export class DeviceModel
 
     this.flipFirstAndThirdByte(buffer);
     return buffer;
-}
+  }
 
   // Helper function to flip the first and third bytes
   flipFirstAndThirdByte(buffer: ArrayBuffer)
