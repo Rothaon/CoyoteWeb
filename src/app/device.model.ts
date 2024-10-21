@@ -1,5 +1,7 @@
 export class DeviceModel
 {
+  // Max Poer 2000
+  // Step 7
   // Known upon construction.
   name: string = '';
   id: string = '';
@@ -8,6 +10,8 @@ export class DeviceModel
   batteryLevel: number | null = null;
   channelA: number | null = null;
   channelB: number | null = null;
+  maxPower: number | null = null;
+  powerStep: number | null = null;
   
   gattServer: any = null;
   
@@ -18,6 +22,7 @@ export class DeviceModel
   channelABPowerCharacteristic: any = null;
   waveformACharacteristic: any = null;
   waveformBCharacteristic: any = null;
+  configCharacteristic: any = null;
 
   readonly BATT_SERVICE_UUID: string = "955a180a-0fe2-f5aa-a094-84b8d4f3e8ad";
   readonly SIGNAL_SERVICE_UUID: string = "955a180b-0fe2-f5aa-a094-84b8d4f3e8ad";
@@ -98,6 +103,12 @@ export class DeviceModel
       {
         // Waveform B
         this.waveformBCharacteristic = characteristic;
+      }
+      else if( characteristic.uuid == "955a1507-0fe2-f5aa-a094-84b8d4f3e8ad" )
+      {
+        // Config
+        this.configCharacteristic = characteristic;
+        this.getConfig();
       }
     }
   }
@@ -233,5 +244,37 @@ export class DeviceModel
 
     await this.waveformBCharacteristic.writeValue(buffer);
     console.log('Buffer written:', new Uint8Array(buffer));
+  }
+
+  async getConfig()
+  {
+    console.log('Reading Config Characteristic...');
+
+    // Assuming `config` is a BluetoothRemoteGATTCharacteristic
+    const configValue = await this.configCharacteristic.readValue();
+
+    // Flip the first and third bytes
+    this.flipFirstAndThirdByte(configValue.buffer);
+
+    // Read the values
+    const maxPower = configValue.getUint16(0);
+    const powerStep = configValue.getUint8(2);
+
+    this.maxPower = maxPower;
+    this.powerStep = powerStep;
+
+    console.log('Max Power:', maxPower);
+    console.log('Power Step:', powerStep);
+  }
+
+  // Helper function to flip the first and third bytes
+  flipFirstAndThirdByte(buffer: ArrayBuffer)
+  {
+    const dataView = new DataView(buffer);
+    const firstByte = dataView.getUint8(0);
+    const thirdByte = dataView.getUint8(2);
+
+    dataView.setUint8(0, thirdByte);
+    dataView.setUint8(2, firstByte);
   }
 }
