@@ -33,6 +33,17 @@ export class AppComponent implements OnInit {
 
   ngOnInit() {
     // Initialization logic if any
+    this.deviceData.waveformARead.subscribe(([ax, ay, az]) => {
+      this.axInput = ax;
+      this.ayInput = ay;
+      this.azInput = az;
+    });
+
+    this.deviceData.waveformBRead.subscribe(([bx, by, bz]) => {
+      this.bxInput = bx;
+      this.byInput = by;
+      this.bzInput = bz;
+    });
   }
 
   // Function to print available, unpaired BTLE devices

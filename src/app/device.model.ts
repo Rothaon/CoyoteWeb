@@ -1,7 +1,12 @@
+import { EventEmitter, Output, Injectable } from "@angular/core";
+
+@Injectable({
+  providedIn: 'root'
+})
 export class DeviceModel
 {
-  // Max Poer 2000
-  // Step 7
+  @Output() waveformARead: EventEmitter<[number, number, number]> = new EventEmitter();
+  @Output() waveformBRead: EventEmitter<[number, number, number]> = new EventEmitter();
   // Known upon construction.
   name: string = '';
   id: string = '';
@@ -94,11 +99,13 @@ export class DeviceModel
       {
         // Waveform A
         this.waveformACharacteristic = characteristic;
+        this.readWaveformA();
       }
       else if( characteristic.uuid == "955a1506-0fe2-f5aa-a094-84b8d4f3e8ad" )
       {
         // Waveform B
         this.waveformBCharacteristic = characteristic;
+        this.readWaveformB();
       }
       else if( characteristic.uuid == "955a1507-0fe2-f5aa-a094-84b8d4f3e8ad" )
       {
@@ -135,8 +142,6 @@ export class DeviceModel
   {
     this.channelABPowerCharacteristic.readValue().then((value:any) => {
       const [powerA, powerB] = this.parsePower(new DataView(value.buffer), /*no flip*/ true);
-      //Print buffer
-      console.log(value.buffer);
 
       console.log("Channel A: " + powerA + " Channel B: " + powerB);
       
@@ -152,7 +157,6 @@ export class DeviceModel
       this.channelABPowerCharacteristic.addEventListener('characteristicvaluechanged', (event: any) => {
         const value = event.target.value;
         const [powerA, powerB] = this.parsePower(new DataView(value.buffer));
-        console.log(value.buffer);
     
         console.log("Channel A: " + powerA + " Channel B: " + powerB);
     
@@ -164,17 +168,13 @@ export class DeviceModel
 
   async writeChannelAStrength(channelA: number)
   {
-    // Get buffer
     let buffer = this.encodePower(channelA, this.channelB ?? 0);
-
     await this.channelABPowerCharacteristic.writeValue(buffer);
   }
 
   async writeChannelBStrength(channelB: number)
   {
-    // Get buffer
     let buffer = this.encodePower(this.channelA ?? 0, channelB);
-
     await this.channelABPowerCharacteristic.writeValue(buffer);
   }
 
@@ -195,16 +195,36 @@ export class DeviceModel
     }, 100);
   }
 
+  async readWaveformA()
+  {
+    this.waveformACharacteristic.readValue().then((value:any) => {
+      const [ax, ay, az] = this.parseWaveform(new DataView(value.buffer));
+      console.log("Waveform A: " + ax + " " + ay + " " + az);
+      this.writeWaveformA(ax, ay, az);
+      this.waveformARead.emit([ax, ay, az]);
+    });
+  }
+
+  async readWaveformB()
+  {
+    this.waveformBCharacteristic.readValue().then((value:any) => {
+      const [bx, by, bz] = this.parseWaveform(new DataView(value.buffer));
+      console.log("Waveform B: " + bx + " " + by + " " + bz);
+      this.writeWaveformB(bx, by, bz);
+      this.waveformBRead.emit([bx, by, bz]);
+    });
+  } 
+
   async writeWaveformA(ax: number, ay: number, az: number)
   {
     this.waveABuffer = this.encodeWaveform(ax, ay, az);
-    this.startSendingWaveform();
+    // this.startSendingWaveform();
   }
 
   async writeWaveformB(bx: number, by: number, bz: number)
   {
     this.waveABuffer = this.encodeWaveform(bx, by, bz);
-    this.startSendingWaveform();
+    // this.startSendingWaveform();
   }
   
   async getConfig()
