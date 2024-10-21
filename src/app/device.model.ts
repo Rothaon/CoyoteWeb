@@ -160,14 +160,14 @@ export class DeviceModel
     // every 0.1 call sendNewWaveform
     let count = 0;
     const intervalId = setInterval(async () => {
-      if (count >= 5)
+      if (count >= 50)
       {
         clearInterval(intervalId);
         this.isSendingWaveform = false;
         return;
       }
       let buffer = this.encodeWaveform(5, 95, 20);
-      this.parsePattern(new DataView(buffer));
+      this.parseWaveform(new DataView(buffer));
       await this.waveformBCharacteristic.writeValue(buffer);
       ++count;
     }, 100);
@@ -197,7 +197,7 @@ export class DeviceModel
   
   // -- HELPERS
 
-  parsePattern(dataView: DataView): [number, number, number]
+  parseWaveform(dataView: DataView): [number, number, number]
   {
     this.flipFirstAndThirdByte(dataView.buffer);
     // flipFirstAndThirdByte(zero(4) ~ uint(5).as("az") ~ uint(10).as("ay") ~ uint(5).as("ax"))
