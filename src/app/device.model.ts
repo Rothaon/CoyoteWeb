@@ -71,6 +71,7 @@ export class DeviceModel
       {
         this.batteryLevelCharacteristic = characteristic;
         this.updateBatteryLevel();
+        this.subscribeBatteryLevel();
       }
     }
   }
@@ -116,10 +117,25 @@ export class DeviceModel
       this.batteryLevel = value.getUint8(0);
     });
   }
+
+  async subscribeBatteryLevel()
+  {
+    this.batteryLevelCharacteristic.startNotifications().then(() => {
+      this.batteryLevelCharacteristic.addEventListener('characteristicvaluechanged', (event: any) => {
+        const value = event.target.value;
+        this.batteryLevel = value.getUint8(0);
+      });
+    });
+  }
+
   async readABPowerChannel()
   {
     this.channelABPowerCharacteristic.readValue().then((value:any) => {
-      const [powerA, powerB] = this.parsePower(new DataView(value.buffer));
+      const [powerA, powerB] = this.parsePower(new DataView(value.buffer), /*no flip*/ true);
+      //Print buffer
+      console.log(value.buffer);
+
+      console.log("Channel A: " + powerA + " Channel B: " + powerB);
       
       this.channelA = powerA;
       this.channelB = powerB;
@@ -133,6 +149,7 @@ export class DeviceModel
       this.channelABPowerCharacteristic.addEventListener('characteristicvaluechanged', (event: any) => {
         const value = event.target.value;
         const [powerA, powerB] = this.parsePower(new DataView(value.buffer));
+        console.log(value.buffer);
     
         console.log("Channel A: " + powerA + " Channel B: " + powerB);
     
@@ -144,8 +161,6 @@ export class DeviceModel
 
   async writeChannelAStrength(channelA: number)
   {
-    console.log("Updating Channel A Strength A:" + channelA + " B: " + this.channelB);
-
     // Get buffer
     let buffer = this.encodePower(channelA, this.channelB ?? 0);
 
@@ -154,8 +169,6 @@ export class DeviceModel
 
   async writeChannelBStrength(channelB: number)
   {
-    console.log("Updating Channel B Strength A:" + this.channelA + "B: " + channelB);
-    
     // Get buffer
     let buffer = this.encodePower(this.channelA ?? 0, channelB);
 
@@ -227,9 +240,12 @@ export class DeviceModel
   }
 
   // New method to parse power levels
-  parsePower(dataView: DataView): [number, number]
+  parsePower(dataView: DataView, skipFlip:boolean = false): [number, number]
   {
-    this.flipFirstAndThirdByte(dataView.buffer);
+    if(!skipFlip)
+    {
+      this.flipFirstAndThirdByte(dataView.buffer);
+    }
 
     // notify/write: 3 bytes: flipFirstAndThirdByte(zero(2) ~ uint(11).as("powerLevelB") ~uint(11).as("powerLevelA")
     const powerA = dataView.getUint16(0) >> 3; // push the remainder of B out of the first 2 bytes
