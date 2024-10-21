@@ -85,6 +85,7 @@ export class DeviceModel
       {
         this.channelABPowerCharacteristic = characteristic;
         this.readABPowerChannel();
+        this.subscribeABPowerChannel();
       }
       else if( characteristic.uuid == "955a1505-0fe2-f5aa-a094-84b8d4f3e8ad" )
       {
@@ -115,22 +116,33 @@ export class DeviceModel
       this.batteryLevel = value.getUint8(0);
     });
   }
-
   async readABPowerChannel()
   {
-    console.log("Requesting Channel A and B Power");
     this.channelABPowerCharacteristic.readValue().then((value:any) => {
       const [powerA, powerB] = this.parsePower(new DataView(value.buffer));
-
-      console.log("KChannel A: " + powerA);
-      console.log("KChannel B: " + powerB);
-
+      
       this.channelA = powerA;
       this.channelB = powerB;
     });
   }
 
-  async updateChannelAStrength(channelA: number)
+  async subscribeABPowerChannel()
+  {
+    console.log("Requesting Channel A and B Power");
+    this.channelABPowerCharacteristic.startNotifications().then(() => {
+      this.channelABPowerCharacteristic.addEventListener('characteristicvaluechanged', (event: any) => {
+        const value = event.target.value;
+        const [powerA, powerB] = this.parsePower(new DataView(value.buffer));
+    
+        console.log("Channel A: " + powerA + " Channel B: " + powerB);
+    
+        this.channelA = powerA;
+        this.channelB = powerB;
+      });
+    });
+  }
+
+  async writeChannelAStrength(channelA: number)
   {
     console.log("Updating Channel A Strength A:" + channelA + " B: " + this.channelB);
 
@@ -138,11 +150,9 @@ export class DeviceModel
     let buffer = this.encodePower(channelA, this.channelB ?? 0);
 
     await this.channelABPowerCharacteristic.writeValue(buffer);
-
-    this.readABPowerChannel();
   }
 
-  async updateChannelBStrength(channelB: number)
+  async writeChannelBStrength(channelB: number)
   {
     console.log("Updating Channel B Strength A:" + this.channelA + "B: " + channelB);
     
@@ -150,8 +160,6 @@ export class DeviceModel
     let buffer = this.encodePower(this.channelA ?? 0, channelB);
 
     await this.channelABPowerCharacteristic.writeValue(buffer);
-
-    this.readABPowerChannel();
   }
 
   startSendingWaveform()
@@ -167,8 +175,7 @@ export class DeviceModel
         return;
       }
       let buffer = this.encodeWaveform(5, 95, 20);
-      this.parseWaveform(new DataView(buffer));
-      await this.waveformBCharacteristic.writeValue(buffer);
+      this.waveformBCharacteristic.writeValue(buffer);
       ++count;
     }, 100);
   }
@@ -196,7 +203,6 @@ export class DeviceModel
   }
   
   // -- HELPERS
-
   parseWaveform(dataView: DataView): [number, number, number]
   {
     this.flipFirstAndThirdByte(dataView.buffer);

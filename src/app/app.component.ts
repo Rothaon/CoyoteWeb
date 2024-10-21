@@ -68,13 +68,13 @@ export class AppComponent implements OnInit {
   sendAChannelStrength()
   {
     console.log("Sending A Channel Strength" + this.channelAInput);
-    this.deviceData.updateChannelAStrength(this.channelAInput);
+    this.deviceData.writeChannelAStrength(this.channelAInput);
   }
   
   sendBChannelStrength()
   {
     console.log("Sending B Channel Strength" + this.channelBInput);
-    this.deviceData.updateChannelBStrength(this.channelBInput);
+    this.deviceData.writeChannelBStrength(this.channelBInput);
   }
   
   startSendingWaveform()
