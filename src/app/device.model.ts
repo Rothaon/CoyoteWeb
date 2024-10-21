@@ -27,18 +27,20 @@ export class DeviceModel
   readonly WAVERFORM_A_CHAR_UUID: string = "955a1505-0fe2-f5aa-a094-84b8d4f3e8ad";
   readonly WAVERFORM_B_CHAR_UUID: string = "955a1506-0fe2-f5aa-a094-84b8d4f3e8ad";
 
+  readonly CONFIG_CHAR_UUID: string = "955a1507-0fe2-f5aa-a094-84b8d4f3e8ad"
+
   isSendingWaveform: boolean = false;
 
   constructor()
   {
-    console.log("Pre A");
-    this.sendNewWaveform(31,0,0)
-    console.log("Pre B");
-    this.sendNewWaveform(0,1023,0);
-    console.log("Pre C");
-    this.sendNewWaveform(0,0,31);
-    console.log("Post C");
-    this.sendNewWaveform(1,9,20);
+    // console.log("Pre A");
+    // this.sendNewWaveform(31,0,0)
+    // console.log("Pre B");
+    // this.sendNewWaveform(0,1023,0);
+    // console.log("Pre C");
+    // this.sendNewWaveform(0,0,31);
+    // console.log("Post C");
+    // this.sendNewWaveform(1,9,20);
   }
 
   async getServices()
@@ -128,9 +130,10 @@ export class DeviceModel
     });
   }
 
+  // It looks like A and B channels are switched.
   async writeABPowerChannel(channelA: number | null, channelB: number | null)
   {
-    console.log("Writing Channel A and B Power");
+    console.log("Writing Channel A and B Power" + channelA + " " + channelB);
     if (channelB !== null && channelA !== null)
     {
       /**
@@ -156,21 +159,21 @@ export class DeviceModel
       dataView.setUint8(2, (channelA & 0xFF));
 
       await this.channelABPowerCharacteristic.writeValue(buffer);
-      console.log('Buffer written:', new Uint8Array(buffer));
+      // console.log('Buffer written:', new Uint8Array(buffer));
     }
   }
 
   async updateChannelAStrength(channelA: number)
   {
     console.log("Updating Channel A Strength" + channelA);
-    await this.writeABPowerChannel(this.channelB, channelA);
+    await this.writeABPowerChannel( channelA, this.channelB);
     this.updateABPowerChannel();
   }
 
   async updateChannelBStrength(channelB: number)
   {
     console.log("Updating Channel B Strength" + channelB);
-    await this.writeABPowerChannel( channelB, this.channelA);
+    await this.writeABPowerChannel( this.channelA, channelB);
     this.updateABPowerChannel();
   }
 
@@ -180,7 +183,7 @@ export class DeviceModel
     // every 0.1 call sendNewWaveform
     let count = 0;
     const intervalId = setInterval(() => {
-      if (count >= 100)
+      if (count >= 5)
       {
         clearInterval(intervalId);
         this.isSendingWaveform = false;
